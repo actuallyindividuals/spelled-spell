@@ -1,0 +1,57 @@
+/* @spelled/spell — how a spell draws: the writer's canvas, the caret, the end mark, the format vocabulary,
+   and the renderer rules (fill / stanza / flow). Page chrome (.stage, .piece-stage, …) stays with each page.
+   --spell-ink: the colour of black ink and of the full stop before it becomes the end mark (dark pages set it to #fff). */
+
+/* the writer's canvas */
+.spell-body { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 40vh; margin: 0; }
+.spell-body.typing:not(:has(.caret))::after { content: ''; display: inline-block; width: 0.09em; height: 1em; background: currentColor; margin-left: 0.06em; vertical-align: -0.1em; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* caret as a real element (fill mode): measured by the fit, so it can never wrap alone */
+.spell-body .caret { display: inline-block; width: 0.09em; height: 1em; margin-left: 0.06em; vertical-align: -0.1em; }
+.spell-body.typing .caret { background: currentColor; animation: blink 1s steps(1) infinite; }
+.spell-body.done .caret { background: var(--hot, #ff4c4c); width: min(1ex, 1rem); height: min(1ex, 1rem); margin-left: 0.15em; vertical-align: baseline; animation: punkt 700ms cubic-bezier(.2,.8,.2,1) both; }
+/* the end mark: a plain black full stop that becomes the red square */
+/* the same mark, for headings — sits where the full stop would */
+.punkt { display: inline-block; background: var(--hot, #ff4c4c); width: 1ex; height: 1ex; margin-left: 0.12em; vertical-align: baseline; } /* magazine end mark: an x-height square on the baseline */
+
+@keyframes punkt {
+  0%   { background: var(--spell-ink, #000); border-radius: 50%; width: 0.14em; height: 0.14em; margin-left: 0.08em; }
+  40%  { background: var(--spell-ink, #000); border-radius: 50%; width: 0.14em; height: 0.14em; margin-left: 0.08em; }
+  100% { background: var(--hot, #ff4c4c); border-radius: 0; width: min(1ex, 1rem); height: min(1ex, 1rem); margin-left: 0.15em; }
+}
+
+/* format vocabulary */
+.f-serif   { font-family: 'Libre Caslon Text', Georgia, serif; font-weight: 400; }
+.f-sans    { font-family: Inter, system-ui, sans-serif; font-weight: 400; }
+.f-mono    { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 400; }
+.f-display { font-family: Anton, Impact, sans-serif; font-weight: 400; }
+.f-hand    { font-family: Caveat, cursive; font-weight: 400; }
+.f-s  { font-size: 1rem; }
+.f-m  { font-size: 1.35rem; }
+.f-l  { font-size: 1.75rem; }
+.f-xl { font-size: 2.5rem; }
+.f-display.f-l  { font-size: 2.5rem; }
+.f-display.f-xl { font-size: 3.5rem; }
+.f-hand.f-m { font-size: 1.7rem; } .f-hand.f-l { font-size: 2.2rem; }
+.f-left { text-align: left; } .f-center { text-align: center; } .f-right { text-align: right; }
+.f-upper { text-transform: uppercase; } .f-lower { text-transform: lowercase; }
+.f-tight { line-height: 1.15; } .f-normal { line-height: 1.5; } .f-loose { line-height: 1.9; } .f-poem { line-height: 1.6; }
+.f-black { color: var(--spell-ink, #000); } .f-red { color: var(--hot, #ff4c4c); }
+.f-invert { background: #000; color: #fff; padding: 1.5rem; }
+
+/* renderers: the stage body (fill / stanza fit their box) */
+.stage-body { position: relative; hyphens: none; }
+.stage-body .w { overflow-wrap: normal; word-break: normal; } /* committed words never split; lines wrap at spaces (fill) */
+.stage-body.r-stanza .w { white-space: pre; }                 /* stanza: authored line breaks are the only breaks */
+.stage-body.r-stanza.wrap .w { white-space: pre-wrap; }       /* stanza floor guard: too small unbroken → wrap, hanging indent marks it */
+.stage-body.wrap .ln { display: block; padding-left: 1em; text-indent: -1em; }
+.stage-body.wrap .ln:last-child { display: inline; }
+.stage-body .w-ing { overflow-wrap: anywhere; }              /* the word in progress may */
+.stage-body { min-height: 0; height: 100%; line-height: 1.05 !important; letter-spacing: -0.02em; transform-origin: top left; will-change: transform; }
+
+/* renderer: flow — a page that reads and scrolls; the writer's size applies as-is */
+.stage-body.r-flow { height: auto; line-height: 1.45 !important; letter-spacing: 0; padding-bottom: 0; transform: none !important; }
+
+/* descender room: measured by the fit, so a g/y/p on the last line never hangs under the bar */
+.stage-body { padding-bottom: 0.3em; box-sizing: content-box; }
