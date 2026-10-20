@@ -29,6 +29,12 @@ export interface SpellCanvas {
 }
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+/** the text's direction: that of its first strong letter (Arabic, Hebrew, Persian, Urdu… read right to left) */
+const RTL_LETTER = /[\u0591-\u07FF\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+export const direction = (t: string): 'ltr' | 'rtl' => {
+  const m = t.match(/[\u0591-\u07FF\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]|\p{L}/u);
+  return m && RTL_LETTER.test(m[0]) ? 'rtl' : 'ltr';
+};
 /** the writer's literal \n is an authored line break */
 const authored = (t: string) => t.replace(/\\n/g, '\n');
 
@@ -73,8 +79,10 @@ export function createCanvas(body: HTMLElement, opts: CanvasOpts = {}): SpellCan
     }
     // mirror classes (incl. the cursor) so the probe wraps exactly like the real thing
     probe.className = body.className + ' typing';
+    probe.dir = body.dir;
     probe.innerHTML = body.innerHTML;
     probe.style.width = body.clientWidth + 'px'; // identical wrapping width to the real element
+    const rtl = body.dir === 'rtl';
     const covered = opts.covered?.() ?? 0;
     // available space is the box's *content* area (its padding is the margin around the text)
     const cs = getComputedStyle(box);
@@ -90,7 +98,8 @@ export function createCanvas(body: HTMLElement, opts: CanvasOpts = {}): SpellCan
       range.selectNodeContents(probe!);
       const ink = range.getBoundingClientRect();
       const pb = probe!.getBoundingClientRect();
-      if (ink.right - pb.left > maxW + 0.5 || ink.bottom - pb.top > maxH + 0.5) return false;
+      // text starts at the left (ltr) or the right (rtl) edge; overflow spills past the other one
+      if (Math.max(ink.right - pb.left, pb.right - ink.left) > maxW + 0.5 || ink.bottom - pb.top > maxH + 0.5) return false;
       // the caret must sit on the same line as the last glyph — never alone on a new line
       const caret = probe!.querySelector<HTMLElement>('.caret');
       const txt = probe!.textContent ?? '';
@@ -103,7 +112,9 @@ export function createCanvas(body: HTMLElement, opts: CanvasOpts = {}): SpellCan
           r.setStart(last, last.length - 1);
           r.setEnd(last, last.length);
           const g = r.getBoundingClientRect();
-          if (caret.getBoundingClientRect().left < g.right - 1) return false; // caret left of the last glyph → it wrapped
+          const c = caret.getBoundingClientRect();
+          // the caret sits after the last glyph: to its right (ltr) or its left (rtl); anywhere else → it wrapped
+          if (rtl ? c.right > g.left + 1 : c.left < g.right - 1) return false;
         }
       }
       return true;
@@ -123,6 +134,7 @@ export function createCanvas(body: HTMLElement, opts: CanvasOpts = {}): SpellCan
       wrapMode = wantWrap;
       writeSplit(body, lastText, lastFinished);
       probe.className = body.className + ' typing';
+      probe.dir = body.dir;
       probe.innerHTML = body.innerHTML;
       lo = search();
     }
@@ -151,6 +163,10 @@ export function createCanvas(body: HTMLElement, opts: CanvasOpts = {}): SpellCan
     render(text, finished) {
       lastText = authored(text);
       lastFinished = finished;
+      // the writing sets its own direction: an Arabic spell runs right to left, caret and end mark on the left
+      const dir = direction(lastText);
+      if (body.dir !== dir) body.dir = dir;
+      body.classList.toggle('rtl', dir === 'rtl');
       writeSplit(body, lastText, finished);
       body.classList.toggle('typing', !finished);
       body.classList.toggle('done', finished);

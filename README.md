@@ -65,6 +65,7 @@ Every op has `t`, the time in milliseconds since writing began. The movie caps p
 - `createMovie(timeline, render)` returns a `Movie`: `playFrom(t)`, `pause()`, `toggle()`, `paint(t)`,
   `subscribe(fn)`, plus `D` (the duration on the movie's time axis), `t`, `playing`, `finished`.
   `render(text, index, finished)` is called on every frame.
+- `direction(text)` is `'rtl'` or `'ltr'`, from the first strong letter.
 - `createCanvas(body, { renderer })` returns a `SpellCanvas`: `render(text, finished)` and `refit()`.
   `renderer` is `'fill'` (the words grow to fill the box), `'stanza'` (fill, keeping the writer's line
   breaks) or `'flow'` (a page at the writer's size). The box is `body`'s parent.
@@ -81,7 +82,12 @@ Every op has `t`, the time in milliseconds since writing began. The movie caps p
 - **Spacing:** `f-tight` to `f-poem`
 - **Ink:** `f-black`, `f-red`, `f-invert`
 
-Load the fonts you use (Libre Caslon Text, Inter, IBM Plex Mono, Anton, Caveat).
+Load the fonts you use (Libre Caslon Text, Inter, IBM Plex Mono, Anton, Caveat). Each face falls through to an
+Arabic companion (Amiri, IBM Plex Sans Arabic, Noto Kufi Arabic, Aref Ruqaa) — load those too for Arabic spells.
+
+The canvas reads the text's direction from its first letter and sets `dir` (and an `rtl` class) on the body:
+an Arabic spell runs right to left, the fit scales from the right, and the caret and end mark sit on the left.
+`f-left` and `f-right` mean start and end, so a writer's choice reads the same in either direction.
 
 On a dark page, set `--spell-ink: #fff`. It sets black ink and the full stop before the end mark.
 `--hot` sets the end mark's red (default `#ff4c4c`).
